@@ -142,15 +142,17 @@ class TestAddHFNoiseAndDither:
         assert result.shape == self.audio.shape
 
     def test_adds_noise(self):
-        """Test that noise is added"""
+        """Compare to a snapshot: this helper intentionally edits its input."""
+        original = self.audio.copy()
         result = _add_hf_noise_and_dither(self.audio, self.sample_rate, False)
-        diff = np.abs(result - self.audio)
+        diff = np.abs(result - original)
         assert np.any(diff > 0)  # Some difference should exist
 
     def test_noise_is_subtle(self):
         """Test noise is subtle (not destructive)"""
+        original = self.audio.copy()
         result = _add_hf_noise_and_dither(self.audio, self.sample_rate, False)
-        max_diff = np.max(np.abs(result - self.audio))
+        max_diff = np.max(np.abs(result - original))
         assert max_diff < 0.01  # Should be very small
 
 

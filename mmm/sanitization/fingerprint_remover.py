@@ -52,8 +52,10 @@ class FingerprintRemover:
             "quality_metrics": {},
         }
 
-        # Ensure stereo handling
-        if audio_data.ndim == 1:
+        # Keep the channel axis through processing and metric calculation.
+        # Only restore a flat mono result if the caller supplied flat mono.
+        input_was_1d = audio_data.ndim == 1
+        if input_was_1d:
             audio_data = np.expand_dims(audio_data, axis=1)
 
         cleaned_channels = []
@@ -100,15 +102,15 @@ class FingerprintRemover:
             cleaned_channels.append(cleaned_channel)
 
         # Reconstruct multi-channel audio
-        if len(cleaned_channels) == 1:
-            result["cleaned_audio"] = cleaned_channels[0]
-        else:
-            result["cleaned_audio"] = np.column_stack(cleaned_channels)
+        result["cleaned_audio"] = np.column_stack(cleaned_channels)
 
         # Calculate quality metrics
         result["quality_metrics"] = self._calculate_quality_metrics(
             audio_data, result["cleaned_audio"], sample_rate
         )
+
+        if input_was_1d:
+            result["cleaned_audio"] = result["cleaned_audio"][:, 0]
 
         return result
 

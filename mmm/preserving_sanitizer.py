@@ -74,6 +74,12 @@ def preserving_sanitize(
     """
     _configure_thread_counts()
 
+    input_file = Path(input_file)
+    if not input_file.is_file():
+        return {"success": False, "error": f"Input audio file not found: {input_file}"}
+    if output_file is not None:
+        output_file = Path(output_file)
+
     if seed is not None:
         np.random.seed(seed)
 
@@ -103,7 +109,11 @@ def preserving_sanitize(
     phase_start = time.time()
 
     # Copy file first
-    shutil.copy2(input_file, output_file)
+    try:
+        shutil.copy2(input_file, output_file)
+    except (OSError, shutil.Error) as e:
+        logger.warning("Could not copy input audio to output: %s", e)
+        return {"success": False, "error": "Could not copy input audio to output."}
 
     # Remove metadata using mutagen
     try:
@@ -626,8 +636,9 @@ def _apply_analog_warmth(audio: np.ndarray, sr: int, paranoid_mode: bool) -> np.
     except Exception as e:
         logger.warning("Analog warmth high-pass filter failed: %s", e)
 
-    # Soft saturation
-    audio = np.tanh(audio * drive) / np.tanh(drive)
+    # Unity gain for quiet signals and bounded peaks, including filter overshoot.
+    # Dividing by tanh(drive) adds gain and allows peaks above full scale.
+    audio = np.tanh(audio * drive) / drive
 
     return audio
 
